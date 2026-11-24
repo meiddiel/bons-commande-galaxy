@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f2e4d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bons Galaxy">
+<title>Bons de commande — Galaxy</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{
+  --navy:#1f2e4d; --navy-2:#2b3f66; --accent:#19a974; --accent-2:#e8f7f0;
+  --ink:#1b2230; --muted:#667085; --line:#e3e7ee; --bg:#f4f6fa; --card:#fff;
+  --warn:#b54708; --warn-bg:#fff4e5; --bad:#b42318; --bad-bg:#fdecea; --info:#175cd3; --info-bg:#eaf2ff;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--info)}
+.app{max-width:900px;margin:0 auto;padding:0 0 96px}
+.top{position:sticky;top:0;z-index:20;background:var(--navy);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px}
+.top h1{font-size:17px;margin:0;flex:1;letter-spacing:.2px}
+.sync{font-size:12px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.12);border:0;color:#fff;cursor:pointer}
+.sync.ok{background:rgba(25,169,116,.35)} .sync.err{background:rgba(180,35,24,.55)}
+.wrap{padding:14px 14px 0}
+.tabs{position:fixed;bottom:0;left:0;right:0;z-index:30;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+.tabs a{flex:1;max-width:300px;text-align:center;padding:10px 4px 9px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:600}
+.tabs a b{display:block;font-size:20px;line-height:1.1;font-weight:400}
+.tabs a.on{color:var(--navy)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:0 0 10px}
+.grid{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+.grid .full{grid-column:1/-1}
+@media(max-width:560px){.grid{grid-template-columns:1fr}}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px}
+input,select,textarea{width:100%;padding:10px 11px;border:1px solid #cfd5df;border-radius:10px;background:#fff;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--navy-2);box-shadow:0 0 0 3px rgba(43,63,102,.12)}
+textarea{min-height:70px;resize:vertical}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid #cfd5df;background:#fff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--navy);border-color:var(--navy);color:#fff}
+.btn.ok{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.bad{color:var(--bad);border-color:#f1b5ae}
+.btn.warn{color:var(--warn);border-color:#f5c99a}
+.btn.sm{padding:6px 10px;font-size:13px}
+.btn:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end}
+.search{display:flex;gap:8px;margin-bottom:10px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 12px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
+.chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.bon{display:flex;gap:12px;align-items:center;cursor:pointer}
+.bon .m{flex:1;min-width:0}
+.bon .n{font-weight:700}
+.bon .s{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bon .a{text-align:right;font-weight:700;white-space:nowrap}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;background:#eef0f4;color:#475467}
+.b-Soumis{background:var(--info-bg);color:var(--info)}
+.b-Approuvé{background:var(--accent-2);color:#067647}
+.b-Rejeté,.b-Annulé{background:var(--bad-bg);color:var(--bad)}
+.b-Àcorriger{background:var(--warn-bg);color:var(--warn)}
+.dot{width:8px;height:8px;border-radius:50%;background:#f79009;display:inline-block;margin-left:6px;vertical-align:middle}
+.empty{text-align:center;color:var(--muted);padding:40px 10px}
+.line{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px;background:#fbfcfe}
+.line .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-weight:700;font-size:13px;color:var(--muted)}
+.line .g{display:grid;gap:8px;grid-template-columns:1fr 2.4fr}
+.line .g2{display:grid;gap:8px;grid-template-columns:1fr 1fr 1.4fr 1fr;margin-top:8px}
+@media(max-width:560px){.line .g{grid-template-columns:1fr}.line .g2{grid-template-columns:1fr 1fr}}
+.line .mt{margin-top:8px;text-align:right;font-weight:700}
+.tot{width:100%;border-collapse:collapse}
+.tot td{padding:6px 2px;border-bottom:1px solid var(--line)}
+.tot td:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.tot tr.big td{font-size:17px;font-weight:800;color:var(--navy);border-bottom:0}
+.words{background:var(--accent-2);border-radius:10px;padding:10px;margin-top:10px;font-size:13px}
+.sticky-actions{position:sticky;bottom:64px;background:linear-gradient(transparent,var(--bg) 30%);padding:16px 0 8px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.hist{list-style:none;margin:0;padding:0}
+.hist li{padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.hist li:last-child{border:0}
+.hist .c{color:var(--muted);margin-top:2px}
+.preview{overflow:hidden;border-radius:10px;border:1px solid var(--line);background:#fff;margin-bottom:12px}
+.preview .scaler{transform-origin:top left}
+.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:99;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
+.toast.show{opacity:1}
+.modal{position:fixed;inset:0;background:rgba(16,24,40,.5);z-index:90;display:flex;align-items:flex-end;justify-content:center}
+.modal .box{background:#fff;width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+@media(min-width:600px){.modal{align-items:center}.modal .box{border-radius:18px}}
+.modal h3{margin:0 0 10px}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}
+.logo-prev{max-height:56px;max-width:180px;background:var(--navy);padding:6px;border-radius:8px}
+
+/* ===== Document A4 ===== */
+.sheet{width:210mm;min-height:297mm;padding:12mm 13mm 10mm;background:#fff;color:#1b2230;font:10pt/1.35 Arial,Helvetica,sans-serif;position:relative;display:flex;flex-direction:column}
+.sheet *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.d-head{background:linear-gradient(120deg,#1f2e4d,#2f4775);color:#fff;border-radius:5mm;padding:6mm 7mm;display:flex;justify-content:space-between;align-items:center;gap:6mm}
+.d-brand{display:flex;align-items:center;gap:3mm;min-width:0}
+.d-brand img{max-height:22mm;max-width:55mm;object-fit:contain}
+.d-brand .nm{font-size:17pt;font-weight:800;letter-spacing:1px;line-height:1}
+.d-brand .sub{font-size:7pt;letter-spacing:3px;opacity:.8;margin-top:1mm}
+.d-title{text-align:right}
+.d-title h1{margin:0;font-size:21pt;letter-spacing:.5px;font-weight:800}
+.d-num{display:inline-block;margin:1.5mm 0 1.5mm;padding:1mm 3mm;border:1px solid rgba(255,255,255,.45);border-radius:2mm;font-weight:700;font-size:11pt}
+.d-title .meta{font-size:8.5pt;opacity:.95}
+.d-parties{display:grid;grid-template-columns:1fr 1fr;gap:5mm;margin-top:6mm}
+.d-card{border:1px solid #c9cfda;border-radius:4mm;padding:4mm 5mm;font-size:8.5pt;color:#475467}
+.d-card .lbl{display:block;font-size:7pt;letter-spacing:2.5px;text-transform:uppercase;color:#8a94a6;margin-bottom:1mm}
+.d-card strong{display:block;font-size:12pt;color:#1f2e4d;margin-bottom:1.5mm}
+.d-card b{color:#1b2230}
+.d-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin-top:4mm;font-size:8.5pt}
+.d-meta div{background:#f3f5f9;border-radius:2.5mm;padding:2mm 3mm}
+.d-meta span{display:block;font-size:7pt;color:#8a94a6;text-transform:uppercase;letter-spacing:1px}
+.d-lines{width:100%;border-collapse:collapse;margin-top:5mm;font-size:8.8pt}
+.d-lines th{background:#1f2e4d;color:#fff;font-size:7.5pt;text-transform:uppercase;letter-spacing:.6px;padding:2.2mm 1.8mm;text-align:left}
+.d-lines th:first-child{border-radius:2mm 0 0 2mm}.d-lines th:last-child{border-radius:0 2mm 2mm 0}
+.d-lines td{padding:2.4mm 1.8mm;border-bottom:1px solid #dfe3ea;vertical-align:top}
+.d-lines .r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.d-lines .c{text-align:center}
+.d-lines .code{color:#667085;font-size:8pt;white-space:nowrap}
+.d-lines tr.void td{color:transparent;border-bottom:1px dashed #e6e9ef}
+.d-bottom{display:grid;grid-template-columns:1fr 78mm;gap:6mm;margin-top:5mm;align-items:start}
+.d-words{font-size:9pt;font-style:italic;color:#475467}
+.d-words b{font-style:normal;color:#1b2230}
+.d-notes{margin-top:3mm;font-size:8.5pt;color:#475467;white-space:pre-wrap}
+.d-tot{width:100%;border-collapse:collapse;border:1px solid #c9cfda;font-size:9pt}
+.d-tot td{padding:2mm 3mm;border-bottom:1px solid #e3e7ee}
+.d-tot td:last-child{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.d-tot tr.hl td{background:#2b3f66;color:#fff;font-weight:700;font-size:10.5pt}
+.d-tot tr.net td{background:#1f2e4d;color:#fff;font-weight:800;font-size:12pt}
+.d-tot .neg{color:#b42318}
+.d-visas{display:grid;grid-template-columns:1fr 1fr;gap:5mm;margin-top:auto;padding-top:8mm}
+.d-visas>div{border:1.2px dashed #a7b0c0;border-radius:4mm;height:34mm;padding:3mm 4mm;font-size:8.5pt;color:#667085;position:relative}
+.d-visas>div b{display:block;color:#1b2230;margin-bottom:1.5mm}
+.d-foot{display:flex;justify-content:space-between;gap:4mm;border-top:1.5px solid #1f2e4d;margin-top:6mm;padding-top:2.5mm;font-size:8pt;color:#667085}
+.d-foot i{text-align:center;flex:1}
+.d-wm{position:absolute;top:44%;left:0;right:0;text-align:center;font-size:72pt;font-weight:900;color:rgba(180,35,24,.08);transform:rotate(-28deg);pointer-events:none;letter-spacing:4px}
+.d-wm.grey{color:rgba(31,46,77,.07)}
+.d-stamp{position:absolute;right:6mm;bottom:5mm;border:2px solid #067647;color:#067647;border-radius:3mm;padding:1.5mm 3mm;font-weight:800;font-size:9pt;transform:rotate(-6deg);text-align:center;line-height:1.25}
+.d-stamp small{display:block;font-weight:600;font-size:7pt}
+
+#print-area{display:none}
+@page{size:A4;margin:0}
+@media print{
+  html,body{background:#fff}
+  .app,.tabs,.toast,.modal{display:none!important}
+  #print-area{display:block}
+  .sheet{height:297mm;min-height:0;overflow:hidden}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <h1 id="title">Bons de commande</h1>
+    <button class="sync" id="syncBtn" data-act="sync">Hors ligne</button>
+  </div>
+  <div class="wrap" id="view"></div>
+</div>
+<nav class="tabs">
+  <a href="#/" data-tab="list"><b>☰</b>Bons</a>
+  <a href="#/nouveau" data-tab="new"><b>＋</b>Nouveau</a>
+  <a href="#/parametres" data-tab="settings"><b>⚙</b>Paramètres</a>
+</nav>
+<div id="print-area"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ---------- Stockage local (avec repli en mémoire) ---------- */
+const mem = {};
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : (k in mem ? mem[k] : d); }catch(e){ return k in mem ? mem[k] : d; } },
+  set(k, v){ mem[k] = v; try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+
+const DEFAULTS = {
+  nom: "GALAXY SPORTS CENTER", sousTitre: "SPORTS CENTER",
+  adresse: "Zone Galaxy Andraharo, Antananarivo 101 – Madagascar",
+  tel: "+261 34 75 555 25", email: "galaxysportscenter26@gmail.com", site: "galaxy-sc.com",
+  nif: "4019882145", stat: "74909 11 2026 0 11053", rcs: "2026B01038",
+  slogan: "Le sport, notre galaxie. Votre satisfaction, notre mission.",
+  tva: 20, delaiLivraison: 4, prefixe: "BC", conditions: "", adresseLivraison: "Zone Galaxy Andraharo, Antananarivo 101",
+  utilisateur: "", apiUrl: "", token: "", logo: ""
+};
+let S = Object.assign({}, DEFAULTS, store.get("bc_settings", {}));
+let bons = store.get("bc_bons", null);
+let fournisseurs = store.get("bc_fournisseurs", {});
+let draft = null;
+let filtre = { q: "", statut: "Tous" };
+let syncState = "idle";
+
+const STATUTS = ["Brouillon", "Soumis", "À corriger", "Approuvé", "Rejeté", "Annulé"];
+const EDITABLE = ["Brouillon", "À corriger"];
+
+/* ---------- Outils ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = v => { const n = parseFloat(String(v).replace(/\s/g, "").replace(",", ".")); return isFinite(n) ? n : 0; };
+const fmt = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ").replace("-", "−") + " Ar";
+const fmtN = n => String(Math.round(n * 100) / 100).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+const addDays = (iso, n) => { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+const dFr = iso => iso ? iso.split("-").reverse().join("/") : "—";
+const nowIso = () => new Date().toISOString();
+const dtFr = iso => { if(!iso) return ""; const d = new Date(iso); return d.toLocaleDateString("fr-FR") + " " + d.toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"}); };
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+const clone = o => JSON.parse(JSON.stringify(o));
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2600); }
+
+/* ---------- Montant en lettres (orthographe traditionnelle) ---------- */
+const U = ["zéro","un","deux","trois","quatre","cinq","six","sept","huit","neuf","dix","onze","douze","treize","quatorze","quinze","seize","dix-sept","dix-huit","dix-neuf"];
+const DZ = ["","","vingt","trente","quarante","cinquante","soixante"];
+function lt100(n){
+  if(n < 20) return U[n];
+  const d = Math.floor(n / 10), u = n % 10;
+  if(d < 7) return DZ[d] + (u === 0 ? "" : u === 1 ? " et un" : "-" + U[u]);
+  if(d === 7) return "soixante" + (u === 1 ? " et onze" : "-" + U[10 + u]);
+  if(d === 8) return u === 0 ? "quatre-vingts" : "quatre-vingt-" + U[u];
+  return "quatre-vingt-" + U[10 + u];
+}
+function lt1000(n){
+  const c = Math.floor(n / 100), r = n % 100; let s = "";
+  if(c) s = c === 1 ? "cent" : U[c] + " cent" + (r === 0 ? "s" : "");
+  if(r) s += (s ? " " : "") + lt100(r);
+  return s;
+}
+function enLettres(n){
+  n = Math.round(Math.abs(n));
+  if(n === 0) return "zéro";
+  const g = [Math.floor(n / 1e9), Math.floor(n % 1e9 / 1e6), Math.floor(n % 1e6 / 1e3), n % 1e3], p = [];
+  if(g[0]) p.push(lt1000(g[0]) + " milliard" + (g[0] > 1 ? "s" : ""));
+  if(g[1]) p.push(lt1000(g[1]) + " million" + (g[1] > 1 ? "s" : ""));
+  if(g[2]) p.push(g[2] === 1 ? "mille" : lt1000(g[2]).replace(/(cent|vingt)s$/, "$1") + " mille");
+  if(g[3]) p.push(lt1000(g[3]));
+  return p.join(" ");
+}
+const lettresAr = n => { const s = enLettres(n); return s.charAt(0).toUpperCase() + s.slice(1) + " ariary"; };
+
+/* ---------- Calculs ---------- */
+function totaux(b){
+  let brut = 0, ht = 0;
+  (b.lignes || []).forEach(l => {
+    const base = num(l.qte) * num(l.pu);
+    brut += base;
+    ht += Math.round(base * (1 - num(l.remise) / 100));
+  });
+  brut = Math.round(brut);
+  const tva = Math.round(ht * num(b.tauxTva) / 100);
+  const ttc = ht + tva;
+  const avoir = Math.round(num(b.avoir));
+  return { brut, remises: brut - ht, ht, tva, ttc, avoir, net: ttc - avoir };
+}
+const montantLigne = l => Math.round(num(l.qte) * num(l.pu) * (1 - num(l.remise) / 100));
+
+/* ---------- Données ---------- */
+function persist(){ store.set("bc_bons", bons); store.set("bc_fournisseurs", fournisseurs); }
+function saveSettings(){ store.set("bc_settings", S); }
+function prochainNumero(){
+  const an = new Date().getFullYear();
+  const re = new RegExp("^" + S.prefixe + "-(\\d+)-" + an + "$");
+  let max = 0;
+  bons.forEach(b => { const m = re.exec(b.numero); if(m) max = Math.max(max, +m[1]); });
+  return S.prefixe + "-" + String(max + 1).padStart(3, "0") + "-" + an;
+}
+function nouveauBon(){
+  const d = today();
+  return {
+    id: uid(), numero: prochainNumero(), version: 1, statut: "Brouillon",
+    date: d, livraison: addDays(d, num(S.delaiLivraison) || 0),
+    fournisseur: { nom: "", adresse: "", nif: "", stat: "", rcs: "", contact: "" },
+    demandeur: S.utilisateur || "", adresseLivraison: S.adresseLivraison, conditions: S.conditions,
+    lignes: [ { code: "", designation: "", unite: "pce", qte: 1, pu: 0, remise: 0 } ],
+    tauxTva: num(S.tva), avoirRef: "", avoir: 0, notes: "",
+    revue: { commentaire: "", par: "", date: "" },
+    historique: [], cree: nowIso(), modifie: nowIso(), dirty: true
+  };
+}
+function logEvt(b, action, commentaire){
+  b.historique.push({ date: nowIso(), action, par: S.utilisateur || "—", commentaire: commentaire || "" });
+  b.modifie = nowIso(); b.dirty = true;
+}
+function upsert(b){
+  const i = bons.findIndex(x => x.id === b.id);
+  if(i >= 0) bons[i] = b; else bons.unshift(b);
+  if(b.fournisseur && b.fournisseur.nom) fournisseurs[b.fournisseur.nom.trim().toLowerCase()] = clone(b.fournisseur);
+  persist(); syncSoon();
+}
+const getBon = id => bons.find(b => b.id === id);
+const derniereVersion = b => bons.filter(x => x.numero === b.numero).reduce((m, x) => Math.max(m, x.version), 0);
+
+if(!bons){
+  // Exemple repris du bon papier, avec totaux recalculés
+  bons = [{
+    id: uid(), numero: "BC-002-" + new Date().getFullYear(), version: 1, statut: "Brouillon",
+    date: today(), livraison: addDays(today(), 4),
+    fournisseur: { nom: "Sanifer", adresse: "Lot II I 20 AA Morarano Alarobia – Antananarivo 101", nif: "2000036135", stat: "46900 11 1993 010053", rcs: "2002B00420", contact: "" },
+    demandeur: "", adresseLivraison: DEFAULTS.adresseLivraison, conditions: "",
+    lignes: [
+      { code: "10041749", designation: "Fer cornière 40x40x4", unite: "barre", qte: 8, pu: 91000, remise: 10 },
+      { code: "02062648", designation: "Serre-câble plat 2 boulons AZ", unite: "pce", qte: 12, pu: 11000, remise: 0 },
+      { code: "01071049", designation: "Foret métal 3T D6x93 mm", unite: "pce", qte: 10, pu: 24000, remise: 10 }
+    ],
+    tauxTva: 20, avoirRef: "", avoir: 32220, notes: "Exemple : bon BC-002 du 24/11/2026 avec les totaux recalculés.",
+    revue: { commentaire: "", par: "", date: "" },
+    historique: [{ date: nowIso(), action: "Création", par: "—", commentaire: "Exemple importé" }],
+    cree: nowIso(), modifie: nowIso(), dirty: false, exemple: true
+  }];
+  fournisseurs.sanifer = clone(bons[0].fournisseur);
+  persist();
+}
+
+/* ---------- Synchronisation Google Sheet ---------- */
+function setSync(state, label){
+  syncState = state;
+  const el = $("#syncBtn");
+  el.className = "sync " + (state === "ok" ? "ok" : state === "err" ? "err" : "");
+  el.textContent = label;
+}
+function refreshSyncLabel(){
+  const pending = bons.filter(b => b.dirty && !b.exemple).length;
+  if(!S.apiUrl) return setSync("idle", "Local seulement");
+  if(!navigator.onLine) return setSync("idle", "Hors ligne" + (pending ? " · " + pending : ""));
+  if(syncState === "err") return;
+  setSync(pending ? "idle" : "ok", pending ? pending + " à envoyer" : "Synchronisé ✓");
+}
+async function api(payload){
+  const r = await fetch(S.apiUrl, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(Object.assign({ token: S.token }, payload)) });
+  const j = await r.json();
+  if(!j.ok) throw new Error(j.error || "Erreur serveur");
+  return j;
+}
+function payload(b){
+  const p = clone(b); delete p.dirty;
+  p.totaux = totaux(b); p.lettres = lettresAr(p.totaux.net);
+  return p;
+}
+let syncTimer = null, syncing = false;
+function syncSoon(){ clearTimeout(syncTimer); syncTimer = setTimeout(syncAll, 800); refreshSyncLabel(); }
+async function syncAll(manual){
+  if(!S.apiUrl){ if(manual) toast("Ajoutez l'URL de l'API dans Paramètres"); refreshSyncLabel(); return; }
+  if(!navigator.onLine || syncing) { refreshSyncLabel(); return; }
+  syncing = true; setSync("idle", "Envoi…");
+  try{
+    for(const b of bons.filter(x => x.dirty && !x.exemple)){
+      await api({ action: "save", bon: payload(b) });
+      b.dirty = false; b.historique.forEach(h => h.s = 1); persist();
+    }
+    if(manual) await pull();
+    syncState = "idle"; refreshSyncLabel();
+    if(manual) toast("Synchronisation terminée");
+  }catch(e){
+    setSync("err", "Erreur sync"); toast("Synchronisation impossible : " + e.message);
+  }finally{ syncing = false; }
+}
+async function pull(){
+  const j = await api({ action: "list" });
+  let n = 0;
+  (j.bons || []).forEach(r => {
+    if(!r || !r.id) return;
+    delete r.totaux; delete r.lettres;
+    const l = getBon(r.id);
+    if(!l){ bons.push(Object.assign(r, { dirty: false })); n++; }
+    else if(!l.dirty && (r.modifie || "") > (l.modifie || "")){ Object.assign(l, r, { dirty: false }); n++; }
+    if(r.fournisseur && r.fournisseur.nom) fournisseurs[r.fournisseur.nom.trim().toLowerCase()] = r.fournisseur;
+  });
+  bons.sort((a, b) => (b.modifie || "").localeCompare(a.modifie || ""));
+  persist(); if(n) route();
+}
+window.addEventListener("online", () => syncAll());
+window.addEventListener("offline", refreshSyncLabel);
+
+/* ---------- Document imprimable ---------- */
+const WM = { "Brouillon": "BROUILLON", "Soumis": "EN REVUE", "À corriger": "À CORRIGER", "Rejeté": "REJETÉ", "Annulé": "ANNULÉ" };
+function docHTML(b){
+  const t = totaux(b), f = b.fournisseur || {};
+  const lignes = b.lignes.filter(l => l.designation || num(l.qte) || num(l.pu));
+  const vides = Math.max(0, 6 - lignes.length);
+  const brand = S.logo
+    ? `<img src="${esc(S.logo)}" alt="">`
+    : `<div><div class="nm">${esc((S.nom || "").split(" ")[0])}</div><div class="sub">${esc(S.sousTitre)}</div></div>`;
+  const wm = WM[b.statut] ? `<div class="d-wm ${b.statut === "Brouillon" || b.statut === "Soumis" ? "grey" : ""}">${WM[b.statut]}</div>` : "";
+  const stamp = b.statut === "Approuvé" ? `<div class="d-stamp">APPROUVÉ<small>${esc(b.revue.par)} · ${dFr((b.revue.date || "").slice(0, 10))}</small></div>` : "";
+  return `<div class="sheet">${wm}
+  <div class="d-head">
+    <div class="d-brand">${brand}</div>
+    <div class="d-title"><h1>BON DE COMMANDE</h1>
+      <div class="d-num">N° ${esc(b.numero)} · v${b.version}</div>
+      <div class="meta">Date : <b>${dFr(b.date)}</b> · Livraison souhaitée : <b>${dFr(b.livraison)}</b></div>
+      <div class="meta">Devise : Ariary (Ar)</div></div>
+  </div>
+  <div class="d-parties">
+    <div class="d-card"><span class="lbl">Acheteur</span><strong>${esc(S.nom)}</strong>
+      ${esc(S.adresse)}<br>${esc(S.tel)}${S.email ? " · " + esc(S.email) : ""}<br>
+      <b>NIF</b> ${esc(S.nif)} · <b>STAT</b> ${esc(S.stat)}<br><b>RCS</b> ${esc(S.rcs)}</div>
+    <div class="d-card"><span class="lbl">Fournisseur</span><strong>${esc(f.nom || "—")}</strong>
+      ${esc(f.adresse)}${f.contact ? "<br>" + esc(f.contact) : ""}<br>
+      ${f.nif ? "<b>NIF</b> " + esc(f.nif) : ""}${f.stat ? " · <b>STAT</b> " + esc(f.stat) : ""}<br>${f.rcs ? "<b>RCS</b> " + esc(f.rcs) : ""}</div>
+  </div>
+  <div class="d-meta">
+    <div><span>Demandeur</span>${esc(b.demandeur || "—")}</div>
+    <div><span>Livraison à</span>${esc(b.adresseLivraison || "—")}</div>
+    <div><span>Paiement</span>${esc(b.conditions || "—")}</div>
+  </div>
+  <table class="d-lines"><thead><tr><th>N°</th><th>Code</th><th>Désignation</th><th class="c">Unité</th><th class="r">Qté</th><th class="r">PU HT</th><th class="r">Remise</th><th class="r">Montant HT</th></tr></thead><tbody>
+  ${lignes.map((l, i) => `<tr><td>${i + 1}</td><td class="code">${esc(l.code)}</td><td>${esc(l.designation)}</td><td class="c">${esc(l.unite)}</td><td class="r">${fmtN(num(l.qte))}</td><td class="r">${fmt(num(l.pu))}</td><td class="r">${num(l.remise) ? fmtN(num(l.remise)) + " %" : "—"}</td><td class="r"><b>${fmt(montantLigne(l))}</b></td></tr>`).join("")}
+  ${Array.from({ length: vides }, () => `<tr class="void"><td colspan="8">·</td></tr>`).join("")}
+  </tbody></table>
+  <div class="d-bottom">
+    <div><div class="d-words">Arrêté le présent bon de commande à la somme de : <b>${esc(lettresAr(t.net))}</b> (${fmt(t.net)}).</div>
+      ${b.notes ? `<div class="d-notes">${esc(b.notes)}</div>` : ""}</div>
+    <table class="d-tot">
+      <tr><td>Total brut HT</td><td>${fmt(t.brut)}</td></tr>
+      ${t.remises ? `<tr><td>Remises</td><td class="neg">− ${fmt(t.remises)}</td></tr>` : ""}
+      <tr><td><b>Total HT</b></td><td><b>${fmt(t.ht)}</b></td></tr>
+      <tr><td>TVA (${fmtN(num(b.tauxTva))} %)</td><td>${fmt(t.tva)}</td></tr>
+      <tr class="hl"><td>Total TTC</td><td>${fmt(t.ttc)}</td></tr>
+      ${t.avoir ? `<tr><td>Avoir à déduire${b.avoirRef ? " (" + esc(b.avoirRef) + ")" : ""}</td><td class="neg">− ${fmt(t.avoir)}</td></tr>` : ""}
+      <tr class="net"><td>Net à payer</td><td>${fmt(t.net)}</td></tr>
+    </table>
+  </div>
+  <div class="d-visas">
+    <div><b>Visa du demandeur</b>Nom : ${esc(b.demandeur)}<br>Date :</div>
+    <div><b>Visa de la direction</b>Nom : ${b.statut === "Approuvé" ? esc(b.revue.par) : ""}<br>Date : ${b.statut === "Approuvé" ? dFr((b.revue.date || "").slice(0, 10)) : ""}${stamp}</div>
+  </div>
+  <div class="d-foot"><span>${esc(S.site)}</span><i>${esc(S.slogan)}</i><span>${esc(S.tel)}</span></div>
+  </div>`;
+}
+function imprimer(b){
+  $("#print-area").innerHTML = docHTML(b);
+  const done = () => { $("#print-area").innerHTML = ""; window.removeEventListener("afterprint", done); };
+  window.addEventListener("afterprint", done);
+  setTimeout(() => window.print(), 50);
+}
+
+/* ---------- Vues ---------- */
+function setTab(t){ document.querySelectorAll(".tabs a").forEach(a => a.classList.toggle("on", a.dataset.tab === t)); }
+const badge = s => `<span class="badge b-${s.replace(/\s/g, "")}">${esc(s)}</span>`;
+
+function viewList(){
+  setTab("list"); $("#title").textContent = "Bons de commande";
+  const q = filtre.q.trim().toLowerCase();
+  const list = bons.filter(b =>
+    (filtre.statut === "Tous" || b.statut === filtre.statut) &&
+    (!q || [b.numero, b.fournisseur.nom, b.demandeur, ...b.lignes.map(l => l.designation + " " + l.code)].join(" ").toLowerCase().includes(q)));
+  const counts = {}; bons.forEach(b => counts[b.statut] = (counts[b.statut] || 0) + 1);
+  $("#view").innerHTML = `
+    <div class="search"><input id="q" type="search" placeholder="Rechercher n°, fournisseur, article…" value="${esc(filtre.q)}"></div>
+    <div class="chips">${["Tous", ...STATUTS].map(s => `<button class="chip ${filtre.statut === s ? "on" : ""}" data-act="filtre" data-v="${s}">${s}${s !== "Tous" && counts[s] ? " · " + counts[s] : ""}</button>`).join("")}</div>
+    ${list.length ? list.map(b => { const t = totaux(b); return `
+      <div class="card bon" data-act="open" data-id="${b.id}">
+        <div class="m"><div class="n">${esc(b.numero)} <span style="color:var(--muted);font-weight:600">v${b.version}</span>${b.dirty && !b.exemple && S.apiUrl ? '<span class="dot" title="Non synchronisé"></span>' : ""}</div>
+        <div class="s">${esc(b.fournisseur.nom || "Fournisseur ?")} · ${dFr(b.date)}</div></div>
+        <div><div class="a">${fmt(t.net)}</div><div style="text-align:right;margin-top:3px">${badge(b.statut)}</div></div>
+      </div>`; }).join("") : `<div class="empty">Aucun bon.<br><br><a class="btn pri" href="#/nouveau">＋ Nouveau bon</a></div>`}`;
+  const qi = $("#q");
+  qi.oninput = () => { filtre.q = qi.value; const p = qi.selectionStart; viewList(); const n = $("#q"); n.focus(); n.setSelectionRange(p, p); };
+}
+
+function field(label, path, val, opts = {}){
+  const type = opts.type || "text";
+  const attrs = `data-f="${path}" ${opts.list ? `list="${opts.list}"` : ""} ${opts.ph ? `placeholder="${esc(opts.ph)}"` : ""} ${type === "number" ? 'inputmode="decimal" step="any"' : ""}`;
+  const ctl = type === "textarea" ? `<textarea ${attrs}>${esc(val)}</textarea>` : `<input type="${type}" value="${esc(val)}" ${attrs}>`;
+  return `<div class="${opts.full ? "full" : ""}"><label>${label}</label>${ctl}</div>`;
+}
+function viewEdit(id){
+  setTab(id ? "" : "new");
+  if(!draft || (id && draft.id !== id) || (!id && !draft._new)){
+    if(id){ const b = getBon(id); if(!b) return go("#/"); if(!EDITABLE.includes(b.statut)) return go("#/bon/" + id); draft = clone(b); }
+    else { draft = nouveauBon(); draft._new = true; }
+  }
+  const b = draft, f = b.fournisseur;
+  $("#title").textContent = (b._new ? "Nouveau · " : "Modifier · ") + b.numero + " v" + b.version;
+  $("#view").innerHTML = `
+  ${b.statut === "À corriger" && b.revue.commentaire ? `<div class="card" style="border-color:#f5c99a;background:var(--warn-bg)"><b>Correction demandée</b> par ${esc(b.revue.par)} :<br>${esc(b.revue.commentaire)}</div>` : ""}
+  <div class="card"><h2>En-tête</h2><div class="grid">
+    ${field("Numéro", "numero", b.numero)}
+    ${field("Date", "date", b.date, { type: "date" })}
+    ${field("Livraison souhaitée", "livraison", b.livraison, { type: "date" })}
+    ${field("Demandeur", "demandeur", b.demandeur, { ph: "Nom de la personne qui commande" })}
+    ${field("Adresse de livraison", "adresseLivraison", b.adresseLivraison, { full: true })}
+    ${field("Conditions de paiement", "conditions", b.conditions, { full: true, ph: "Ex. : virement à 30 jours, chèque à la livraison…" })}
+  </div></div>
+  <div class="card"><h2>Fournisseur</h2><div class="grid">
+    ${field("Nom", "fournisseur.nom", f.nom, { list: "dl-four", ph: "Ex. : Sanifer" })}
+    ${field("Contact", "fournisseur.contact", f.contact, { ph: "Tél. ou e-mail" })}
+    ${field("Adresse", "fournisseur.adresse", f.adresse, { full: true })}
+    ${field("NIF", "fournisseur.nif", f.nif)}
+    ${field("STAT", "fournisseur.stat", f.stat)}
+    ${field("RCS", "fournisseur.rcs", f.rcs)}
+  </div>
+  <datalist id="dl-four">${Object.values(fournisseurs).map(x => `<option value="${esc(x.nom)}">`).join("")}</datalist></div>
+  <div class="card"><h2>Articles</h2><div id="lines">${b.lignes.map((l, i) => lineHTML(l, i)).join("")}</div>
+    <button class="btn" data-act="addline">＋ Ajouter un article</button></div>
+  <div class="card"><h2>Totaux</h2><div class="grid" style="margin-bottom:10px">
+    ${field("TVA (%)", "tauxTva", b.tauxTva, { type: "number" })}
+    ${field("Avoir à déduire (Ar)", "avoir", b.avoir, { type: "number" })}
+    ${field("Référence de l'avoir", "avoirRef", b.avoirRef, { full: true, ph: "Ex. : AV-2026-014" })}
+  </div><div id="totals"></div></div>
+  <div class="card"><h2>Notes</h2>${field("Remarques imprimées sur le bon", "notes", b.notes, { type: "textarea" })}</div>
+  <div class="sticky-actions">
+    ${b._new ? "" : `<button class="btn" data-act="cancel-edit">Annuler</button>`}
+    <button class="btn" data-act="save-draft">Enregistrer</button>
+    <button class="btn pri" data-act="save-submit">Soumettre pour revue</button>
+  </div>`;
+  renderTotals();
+}
+function lineHTML(l, i){
+  return `<div class="line" data-i="${i}"><div class="hd"><span>Article ${i + 1}</span>
+    <span class="row"><button class="btn sm" data-act="upline" data-i="${i}" ${i ? "" : "disabled"}>↑</button><button class="btn sm bad" data-act="delline" data-i="${i}">Supprimer</button></span></div>
+    <div class="g"><div><label>Code</label><input data-l="code" value="${esc(l.code)}"></div>
+      <div><label>Désignation</label><input data-l="designation" value="${esc(l.designation)}"></div></div>
+    <div class="g2"><div><label>Qté</label><input data-l="qte" type="number" inputmode="decimal" step="any" value="${esc(l.qte)}"></div>
+      <div><label>Unité</label><input data-l="unite" list="dl-unite" value="${esc(l.unite)}"></div>
+      <div><label>PU HT (Ar)</label><input data-l="pu" type="number" inputmode="decimal" step="any" value="${esc(l.pu)}"></div>
+      <div><label>Remise %</label><input data-l="remise" type="number" inputmode="decimal" step="any" value="${esc(l.remise)}"></div></div>
+    <div class="mt" data-mt="${i}">${fmt(montantLigne(l))}</div></div>`;
+}
+function renderTotals(){
+  const t = totaux(draft), el = $("#totals"); if(!el) return;
+  el.innerHTML = `<table class="tot">
+    <tr><td>Total brut HT</td><td>${fmt(t.brut)}</td></tr>
+    <tr><td>Remises</td><td>− ${fmt(t.remises)}</td></tr>
+    <tr><td>Total HT</td><td>${fmt(t.ht)}</td></tr>
+    <tr><td>TVA ${fmtN(num(draft.tauxTva))} %</td><td>${fmt(t.tva)}</td></tr>
+    <tr><td>Total TTC</td><td>${fmt(t.ttc)}</td></tr>
+    <tr><td>Avoir</td><td>− ${fmt(t.avoir)}</td></tr>
+    <tr class="big"><td>Net à payer</td><td>${fmt(t.net)}</td></tr></table>
+    <div class="words">${esc(lettresAr(t.net))}</div>`;
+}
+function validate(b){
+  const err = [];
+  if(!b.fournisseur.nom.trim()) err.push("le nom du fournisseur");
+  const ok = b.lignes.filter(l => l.designation.trim() && num(l.qte) > 0);
+  if(!ok.length) err.push("au moins un article avec désignation et quantité");
+  if(b.lignes.some(l => num(l.remise) < 0 || num(l.remise) > 100)) err.push("des remises entre 0 et 100 %");
+  if(!b.demandeur.trim()) err.push("le nom du demandeur");
+  if(bons.some(x => x.numero === b.numero && x.version === b.version && x.id !== b.id)) err.push("un numéro qui n'existe pas déjà");
+  return err;
+}
+function commitDraft(submit){
+  const b = draft;
+  b.lignes = b.lignes.filter(l => l.designation.trim() || num(l.qte) * num(l.pu));
+  if(!b.lignes.length) b.lignes.push({ code: "", designation: "", unite: "pce", qte: 1, pu: 0, remise: 0 });
+  if(submit){ const e = validate(b); if(e.length){ toast("Il manque : " + e.join(", ")); return; } }
+  const isNew = b._new; delete b._new;
+  if(isNew) logEvt(b, "Création");
+  if(submit){ b.statut = "Soumis"; logEvt(b, "Soumis pour revue"); }
+  else { b.modifie = nowIso(); b.dirty = true; if(!isNew) logEvt(b, "Modification"); }
+  delete b.exemple;
+  upsert(b); const id = b.id; draft = null;
+  toast(submit ? "Bon soumis pour revue" : "Bon enregistré");
+  go("#/bon/" + id);
+}
+
+function viewDetail(id){
+  setTab("list");
+  const b = getBon(id); if(!b) return go("#/");
+  const t = totaux(b), last = derniereVersion(b) === b.version;
+  $("#title").textContent = b.numero + " · v" + b.version;
+  const A = [];
+  if(EDITABLE.includes(b.statut)) A.push(`<button class="btn" data-act="edit">Modifier</button>`, `<button class="btn pri" data-act="submit">Soumettre</button>`);
+  if(b.statut === "Soumis") A.push(`<button class="btn ok" data-act="review" data-v="Approuvé">Approuver</button>`, `<button class="btn warn" data-act="review" data-v="À corriger">Demander une correction</button>`, `<button class="btn bad" data-act="review" data-v="Rejeté">Rejeter</button>`);
+  if(["Approuvé", "Rejeté"].includes(b.statut) && last) A.push(`<button class="btn" data-act="newversion">Nouvelle version</button>`);
+  A.push(`<button class="btn" data-act="duplicate">Dupliquer</button>`);
+  if(b.statut !== "Annulé" && b.statut !== "Approuvé") A.push(`<button class="btn bad" data-act="review" data-v="Annulé">Annuler le bon</button>`);
+  const versions = bons.filter(x => x.numero === b.numero).sort((a, c) => c.version - a.version);
+  $("#view").innerHTML = `
+    <div class="card"><div class="row" style="justify-content:space-between"><div>${badge(b.statut)} <span style="color:var(--muted);font-size:13px">${esc(b.fournisseur.nom)} · ${dFr(b.date)}</span></div><div style="font-weight:800;font-size:18px">${fmt(t.net)}</div></div>
+      ${b.revue.commentaire ? `<div class="hint" style="margin-top:8px">Revue de ${esc(b.revue.par)} : « ${esc(b.revue.commentaire)} »</div>` : ""}
+      ${!last ? `<div class="hint" style="margin-top:8px;color:var(--warn)">Une version plus récente existe.</div>` : ""}</div>
+    <div class="row" style="margin-bottom:12px"><button class="btn pri" data-act="print">🖨 Imprimer / PDF</button>${A.join("")}</div>
+    <div class="preview" id="pv"><div class="scaler">${docHTML(b)}</div></div>
+    ${versions.length > 1 ? `<div class="card"><h2>Versions</h2>${versions.map(v => `<div class="row" style="justify-content:space-between;padding:4px 0"><a href="#/bon/${v.id}">v${v.version}</a>${badge(v.statut)}<span>${fmt(totaux(v).net)}</span></div>`).join("")}</div>` : ""}
+    <div class="card"><h2>Historique</h2><ul class="hist">${b.historique.slice().reverse().map(h => `<li><b>${esc(h.action)}</b> · ${esc(h.par)} · ${dtFr(h.date)}${h.commentaire ? `<div class="c">${esc(h.commentaire)}</div>` : ""}</li>`).join("") || "<li>—</li>"}</ul></div>`;
+  fitPreview();
+}
+function fitPreview(){
+  const pv = $("#pv"); if(!pv) return;
+  const sc = pv.querySelector(".scaler"), sh = sc.firstElementChild;
+  const k = pv.clientWidth / sh.offsetWidth;
+  sc.style.transform = `scale(${k})`; pv.style.height = (sh.offsetHeight * k) + "px";
+}
+window.addEventListener("resize", fitPreview);
+
+function reviewModal(b, statut){
+  const needComment = statut !== "Approuvé";
+  const m = document.createElement("div"); m.className = "modal";
+  m.innerHTML = `<div class="box"><h3>${{ "Approuvé": "Approuver", "À corriger": "Demander une correction", "Rejeté": "Rejeter", "Annulé": "Annuler" }[statut]} · ${esc(b.numero)} v${b.version}</h3>
+    <label>Votre nom</label><input id="rv-nom" value="${esc(S.utilisateur)}">
+    <label style="margin-top:10px">Commentaire${needComment ? " (obligatoire)" : " (facultatif)"}</label><textarea id="rv-com" placeholder="${statut === "À corriger" ? "Ce qu'il faut corriger…" : ""}"></textarea>
+    <div class="row end" style="margin-top:12px"><button class="btn" data-x>Fermer</button><button class="btn ${statut === "Approuvé" ? "ok" : "bad"}" data-y>Confirmer</button></div></div>`;
+  document.body.appendChild(m);
+  m.querySelector("[data-x]").onclick = () => m.remove();
+  m.querySelector("[data-y]").onclick = () => {
+    const nom = m.querySelector("#rv-nom").value.trim(), com = m.querySelector("#rv-com").value.trim();
+    if(!nom) return toast("Indiquez votre nom");
+    if(needComment && !com) return toast("Ajoutez un commentaire");
+    if(nom !== S.utilisateur){ S.utilisateur = nom; saveSettings(); }
+    b.statut = statut; b.revue = { commentaire: com, par: nom, date: nowIso() };
+    logEvt(b, statut === "Annulé" ? "Annulé" : statut === "Approuvé" ? "Approuvé" : statut === "Rejeté" ? "Rejeté" : "Correction demandée", com);
+    upsert(b); m.remove(); toast("Statut : " + statut); route();
+  };
+}
+
+function viewSettings(){
+  setTab("settings"); $("#title").textContent = "Paramètres";
+  const f = (l, k, o = {}) => `<div class="${o.full ? "full" : ""}"><label>${l}</label><input data-s="${k}" type="${o.type || "text"}" value="${esc(S[k])}" ${o.ph ? `placeholder="${esc(o.ph)}"` : ""}></div>`;
+  $("#view").innerHTML = `
+  <div class="card"><h2>Utilisateur</h2><div class="grid">${f("Votre nom (pour les revues)", "utilisateur", { full: true })}</div></div>
+  <div class="card"><h2>Liaison Google Sheet</h2><div class="grid">
+    ${f("URL de l'application Web Apps Script", "apiUrl", { full: true, ph: "https://script.google.com/macros/s/…/exec" })}
+    ${f("Jeton secret", "token", { full: true, ph: "Le même que TOKEN dans Code.gs" })}</div>
+    <div class="row" style="margin-top:10px"><button class="btn" data-act="test">Tester</button><button class="btn pri" data-act="sync">Synchroniser maintenant</button></div>
+    <div class="hint">Les bons sont toujours gardés sur l'appareil, puis envoyés au Sheet dès que la connexion revient.</div></div>
+  <div class="card"><h2>Entreprise (acheteur)</h2><div class="grid">
+    ${f("Raison sociale", "nom")}${f("Sous-titre du logo", "sousTitre")}
+    ${f("Adresse", "adresse", { full: true })}
+    ${f("Téléphone", "tel")}${f("E-mail", "email")}
+    ${f("NIF", "nif")}${f("STAT", "stat")}${f("RCS", "rcs")}${f("Site web", "site")}
+    ${f("Slogan (pied de page)", "slogan", { full: true })}
+    <div class="full"><label>Logo (PNG transparent conseillé)</label><div class="row">${S.logo ? `<img class="logo-prev" src="${esc(S.logo)}">` : ""}<input type="file" accept="image/*" id="logo" style="flex:1">${S.logo ? '<button class="btn sm bad" data-act="nologo">Retirer</button>' : ""}</div></div>
+  </div></div>
+  <div class="card"><h2>Valeurs par défaut</h2><div class="grid">
+    ${f("Préfixe de numérotation", "prefixe")}${f("TVA (%)", "tva", { type: "number" })}
+    ${f("Délai de livraison (jours)", "delaiLivraison", { type: "number" })}
+    ${f("Adresse de livraison", "adresseLivraison")}
+    ${f("Conditions de paiement", "conditions", { full: true })}</div></div>
+  <div class="card"><h2>Données</h2><div class="row"><button class="btn" data-act="export">Exporter (JSON)</button></div>
+    <div class="hint">${bons.length} bon(s) sur cet appareil.</div></div>`;
+  $("#logo").onchange = e => {
+    const file = e.target.files[0]; if(!file) return;
+    const img = new Image(), rd = new FileReader();
+    rd.onload = () => { img.onload = () => {
+      const k = Math.min(1, 400 / img.width), c = document.createElement("canvas");
+      c.width = img.width * k; c.height = img.height * k; c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      S.logo = c.toDataURL("image/png"); saveSettings(); toast("Logo enregistré"); viewSettings();
+    }; img.src = rd.result; };
+    rd.readAsDataURL(file);
+  };
+}
+
+/* ---------- Événements ---------- */
+document.addEventListener("input", e => {
+  const el = e.target;
+  if(el.dataset.s !== undefined){ S[el.dataset.s] = el.type === "number" ? num(el.value) : el.value.trim(); saveSettings(); refreshSyncLabel(); return; }
+  if(!draft) return;
+  if(el.dataset.f){
+    const p = el.dataset.f.split(".");
+    if(p.length === 2) draft[p[0]][p[1]] = el.value; else draft[p[0]] = el.value;
+    if(el.dataset.f === "fournisseur.nom"){
+      const known = fournisseurs[el.value.trim().toLowerCase()];
+      if(known){ draft.fournisseur = Object.assign(clone(known), { nom: el.value }); ["contact", "adresse", "nif", "stat", "rcs"].forEach(k => { const i = document.querySelector(`[data-f="fournisseur.${k}"]`); if(i) i.value = draft.fournisseur[k] || ""; }); }
+    }
+    renderTotals();
+  }
+  if(el.dataset.l){
+    const i = +el.closest(".line").dataset.i, l = draft.lignes[i];
+    l[el.dataset.l] = ["qte", "pu", "remise"].includes(el.dataset.l) ? el.value : el.value;
+    const mt = document.querySelector(`[data-mt="${i}"]`); if(mt) mt.textContent = fmt(montantLigne(l));
+    renderTotals();
+  }
+});
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-act]"); if(!el) return;
+  const act = el.dataset.act, h = location.hash, id = (h.match(/#\/(?:bon|modifier)\/(.+)$/) || [])[1];
+  const b = id && getBon(id);
+  switch(act){
+    case "sync": syncAll(true); break;
+    case "filtre": filtre.statut = el.dataset.v; viewList(); break;
+    case "open": go("#/bon/" + el.dataset.id); break;
+    case "addline": draft.lignes.push({ code: "", designation: "", unite: "pce", qte: 1, pu: 0, remise: 0 }); $("#lines").innerHTML = draft.lignes.map(lineHTML).join(""); renderTotals(); $("#lines").lastElementChild.querySelector('[data-l="designation"]').focus(); break;
+    case "delline": draft.lignes.splice(+el.dataset.i, 1); if(!draft.lignes.length) draft.lignes.push({ code: "", designation: "", unite: "pce", qte: 1, pu: 0, remise: 0 }); $("#lines").innerHTML = draft.lignes.map(lineHTML).join(""); renderTotals(); break;
+    case "upline": { const i = +el.dataset.i; [draft.lignes[i - 1], draft.lignes[i]] = [draft.lignes[i], draft.lignes[i - 1]]; $("#lines").innerHTML = draft.lignes.map(lineHTML).join(""); break; }
+    case "save-draft": commitDraft(false); break;
+    case "save-submit": commitDraft(true); break;
+    case "cancel-edit": { const i = draft.id; draft = null; go("#/bon/" + i); break; }
+    case "edit": draft = null; go("#/modifier/" + id); break;
+    case "submit": { const err = validate(b); if(err.length){ toast("Il manque : " + err.join(", ")); go("#/modifier/" + id); break; } b.statut = "Soumis"; delete b.exemple; logEvt(b, "Soumis pour revue"); upsert(b); toast("Bon soumis pour revue"); route(); break; }
+    case "review": reviewModal(b, el.dataset.v); break;
+    case "print": imprimer(b); break;
+    case "newversion": { const n = clone(b); Object.assign(n, { id: uid(), version: derniereVersion(b) + 1, statut: "Brouillon", revue: { commentaire: "", par: "", date: "" }, historique: [], cree: nowIso() }); logEvt(n, "Nouvelle version", "À partir de la v" + b.version); upsert(n); draft = null; go("#/modifier/" + n.id); break; }
+    case "duplicate": { const n = clone(b); Object.assign(n, { id: uid(), numero: prochainNumero(), version: 1, statut: "Brouillon", date: today(), livraison: addDays(today(), num(S.delaiLivraison) || 0), avoir: 0, avoirRef: "", revue: { commentaire: "", par: "", date: "" }, historique: [], cree: nowIso() }); delete n.exemple; logEvt(n, "Création", "Copie de " + b.numero + " v" + b.version); upsert(n); draft = null; go("#/modifier/" + n.id); break; }
+    case "test": (async () => { if(!S.apiUrl) return toast("Renseignez l'URL"); try{ await api({ action: "ping" }); syncState = "idle"; toast("Connexion au Sheet OK ✓"); refreshSyncLabel(); }catch(err){ toast("Échec : " + err.message); } })(); break;
+    case "nologo": S.logo = ""; saveSettings(); viewSettings(); break;
+    case "export": { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(bons, null, 2)], { type: "application/json" })); a.download = "bons-de-commande-" + today() + ".json"; a.click(); break; }
+  }
+});
+
+/* ---------- Routeur ---------- */
+function go(h){ if(location.hash === h) route(); else location.hash = h; }
+function route(){
+  const h = location.hash || "#/";
+  let m;
+  window.scrollTo(0, 0);
+  if(h === "#/nouveau") viewEdit(null);
+  else if((m = h.match(/^#\/modifier\/(.+)$/))) viewEdit(m[1]);
+  else if((m = h.match(/^#\/bon\/(.+)$/))) viewDetail(m[1]);
+  else if(h === "#/parametres") viewSettings();
+  else { draft = draft && draft._new ? draft : null; viewList(); }
+  refreshSyncLabel();
+}
+window.addEventListener("hashchange", route);
+document.body.insertAdjacentHTML("beforeend", `<datalist id="dl-unite"><option value="pce"><option value="barre"><option value="m"><option value="m²"><option value="kg"><option value="l"><option value="lot"><option value="carton"><option value="boîte"><option value="sac"></datalist>`);
+route();
+if(S.apiUrl) syncAll();
+
+/* ---------- PWA ---------- */
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  try{ navigator.serviceWorker.register("sw.js").catch(() => {}); }catch(e){}
+}
+</script>
+</body>
+</html>
