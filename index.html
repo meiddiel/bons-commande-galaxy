@@ -490,7 +490,7 @@ function viewEdit(id){
     ${field("STAT", "fournisseur.stat", f.stat)}
     ${field("RCS", "fournisseur.rcs", f.rcs)}
   </div>
-  <datalist id="dl-four">${Object.values(fournisseurs).map(x => `<option value="${esc(x.nom)}">`).join("")}</datalist></div>
+  ${catalogueDatalists()}<datalist id="dl-four">${Object.values(fournisseurs).map(x => `<option value="${esc(x.nom)}">`).join("")}</datalist></div>
   <div class="card"><h2>Articles</h2><div id="lines">${b.lignes.map((l, i) => lineHTML(l, i)).join("")}</div>
     <button class="btn" data-act="addline">＋ Ajouter un article</button></div>
   <div class="card"><h2>Totaux</h2><div class="grid" style="margin-bottom:10px">
@@ -506,16 +506,50 @@ function viewEdit(id){
   </div>`;
   renderTotals();
 }
+/* ---------- Catalogue d'articles (tiré des bons déjà enregistrés) ---------- */
+const keyOf = v => String(v || "").trim().toLowerCase();
+function catalogue(){
+  const parCode = {}, parDesig = {};
+  bons.slice().sort((a, b) => (a.modifie || "").localeCompare(b.modifie || "")).forEach(b => {
+    if(b.exemple || b.statut === "Annulé") return;
+    (b.lignes || []).forEach(l => {
+      if(!String(l.designation || "").trim()) return;
+      const art = { code: String(l.code || "").trim(), designation: l.designation.trim(), unite: l.unite || "", pu: num(l.pu), remise: num(l.remise), fournisseur: (b.fournisseur || {}).nom || "", date: b.date };
+      if(art.code){ const k = keyOf(art.code); (parCode[k] = parCode[k] || {})[keyOf(art.fournisseur)] = art; parCode[k]._dernier = art; }
+      const d = keyOf(art.designation); (parDesig[d] = parDesig[d] || {})[keyOf(art.fournisseur)] = art; parDesig[d]._dernier = art;
+    });
+  });
+  return { parCode, parDesig };
+}
+// Préfère le prix connu chez le fournisseur du bon, sinon le plus récent.
+const choisir = (e, fourn) => e ? (e[keyOf(fourn)] || e._dernier) : null;
+let CAT = { parCode: {}, parDesig: {} };
+function catalogueDatalists(){
+  CAT = catalogue();
+  const codes = Object.values(CAT.parCode).map(e => e._dernier), desig = Object.values(CAT.parDesig).map(e => e._dernier);
+  return `<datalist id="dl-code">${codes.map(a => `<option value="${esc(a.code)}">${esc(a.designation)}</option>`).join("")}</datalist>
+    <datalist id="dl-desig">${desig.map(a => `<option value="${esc(a.designation)}">${esc(a.code)}</option>`).join("")}</datalist>`;
+}
+function remplirLigne(i, art){
+  const l = draft.lignes[i], box = document.querySelector(`.line[data-i="${i}"]`); if(!box) return;
+  ["code", "designation", "unite", "pu", "remise"].forEach(k => {
+    if(k === "code" && !art.code) return;
+    l[k] = art[k]; const inp = box.querySelector(`[data-l="${k}"]`); if(inp && document.activeElement !== inp) inp.value = art[k];
+  });
+  const h = box.querySelector("[data-hint]");
+  if(h) h.textContent = `Repris du ${dFr(art.date)}${art.fournisseur ? " · " + art.fournisseur : ""} · ${fmt(art.pu)}`;
+}
+
 function lineHTML(l, i){
   return `<div class="line" data-i="${i}"><div class="hd"><span>Article ${i + 1}</span>
     <span class="row"><button class="btn sm" data-act="upline" data-i="${i}" ${i ? "" : "disabled"}>↑</button><button class="btn sm bad" data-act="delline" data-i="${i}">Supprimer</button></span></div>
-    <div class="g"><div><label>Code</label><input data-l="code" value="${esc(l.code)}"></div>
-      <div><label>Désignation</label><input data-l="designation" value="${esc(l.designation)}"></div></div>
+    <div class="g"><div><label>Code</label><input data-l="code" list="dl-code" autocomplete="off" value="${esc(l.code)}"></div>
+      <div><label>Désignation</label><input data-l="designation" list="dl-desig" autocomplete="off" value="${esc(l.designation)}"></div></div>
     <div class="g2"><div><label>Qté</label><input data-l="qte" type="number" inputmode="decimal" step="any" value="${esc(l.qte)}"></div>
       <div><label>Unité</label><input data-l="unite" list="dl-unite" value="${esc(l.unite)}"></div>
       <div><label>PU HT (Ar)</label><input data-l="pu" type="number" inputmode="decimal" step="any" value="${esc(l.pu)}"></div>
       <div><label>Remise %</label><input data-l="remise" type="number" inputmode="decimal" step="any" value="${esc(l.remise)}"></div></div>
-    <div class="mt" data-mt="${i}">${fmt(montantLigne(l))}</div></div>`;
+    <div class="row" style="justify-content:space-between;margin-top:8px"><span class="hint" data-hint style="margin:0"></span><b data-mt="${i}">${fmt(montantLigne(l))}</b></div></div>`;
 }
 function renderTotals(){
   const t = totaux(draft), el = $("#totals"); if(!el) return;
@@ -657,7 +691,9 @@ document.addEventListener("input", e => {
   }
   if(el.dataset.l){
     const i = +el.closest(".line").dataset.i, l = draft.lignes[i];
-    l[el.dataset.l] = ["qte", "pu", "remise"].includes(el.dataset.l) ? el.value : el.value;
+    l[el.dataset.l] = el.value;
+    if(el.dataset.l === "code"){ const art = choisir(CAT.parCode[keyOf(el.value)], draft.fournisseur.nom); if(art) remplirLigne(i, art); }
+    if(el.dataset.l === "designation" && !String(l.code || "").trim()){ const art = choisir(CAT.parDesig[keyOf(el.value)], draft.fournisseur.nom); if(art) remplirLigne(i, art); }
     const mt = document.querySelector(`[data-mt="${i}"]`); if(mt) mt.textContent = fmt(montantLigne(l));
     renderTotals();
   }
