@@ -28,7 +28,7 @@ Après une modification de `Code.gs`, faites **Déployer > Gérer les déploieme
 Une PWA doit être servie en HTTPS. Le plus simple :
 
 - **Netlify Drop** : glissez le dossier sur app.netlify.com/drop.
-- **GitHub Pages** : poussez le dossier dans un dépôt, puis Settings > Pages.
+- **GitHub Pages** (ce dépôt) : le workflow `.github/workflows/pages.yml` publie automatiquement à chaque push sur `main`, à l'adresse https://meiddiel.github.io/bons-commande-galaxy/. Si le premier déploiement échoue, activez Settings > Pages > Source : **GitHub Actions**, puis relancez le workflow.
 - **Le site galaxy-sc.com** : copiez le dossier dans un sous-dossier, par ex. `galaxy-sc.com/bons/`.
 
 Sur le téléphone, ouvrez l'adresse puis **Ajouter à l'écran d'accueil**.
