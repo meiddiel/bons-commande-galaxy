@@ -490,7 +490,7 @@ function viewEdit(id){
     ${field("STAT", "fournisseur.stat", f.stat)}
     ${field("RCS", "fournisseur.rcs", f.rcs)}
   </div>
-  <datalist id="dl-four">${Object.values(fournisseurs).map(x => `<option value="${esc(x.nom)}">`).join("")}</datalist></div>
+  ${catalogueDatalists()}<datalist id="dl-four">${Object.values(fournisseurs).map(x => `<option value="${esc(x.nom)}">`).join("")}</datalist></div>
   <div class="card"><h2>Articles</h2><div id="lines">${b.lignes.map((l, i) => lineHTML(l, i)).join("")}</div>
     <button class="btn" data-act="addline">＋ Ajouter un article</button></div>
   <div class="card"><h2>Totaux</h2><div class="grid" style="margin-bottom:10px">
@@ -504,18 +504,77 @@ function viewEdit(id){
     <button class="btn" data-act="save-draft">Enregistrer</button>
     <button class="btn pri" data-act="save-submit">Soumettre pour revue</button>
   </div>`;
-  renderTotals();
+  renderTotals(); hintsTous();
 }
+/* ---------- Catalogue d'articles (tiré des bons déjà enregistrés) ---------- */
+// Règle : même fournisseur → remplissage automatique ; autre fournisseur → simple suggestion.
+const keyOf = v => String(v || "").trim().toLowerCase();
+function catalogue(excludeId, avant){
+  const parCode = {}, parDesig = {};
+  bons.filter(b => b.id !== excludeId && (!avant || (b.date || "") + (b.cree || "") < avant) && !b.exemple && !["Annulé", "Rejeté"].includes(b.statut))
+    .sort((a, b) => ((a.date || "") + (a.modifie || "")).localeCompare((b.date || "") + (b.modifie || "")))
+    .forEach(b => (b.lignes || []).forEach(l => {
+      if(!String(l.designation || "").trim() || !num(l.pu)) return;
+      const art = { code: String(l.code || "").trim(), designation: l.designation.trim(), unite: l.unite || "", pu: num(l.pu), remise: num(l.remise), fournisseur: (b.fournisseur || {}).nom || "", date: b.date, numero: b.numero };
+      const put = (idx, k) => { (idx[k] = idx[k] || {})[keyOf(art.fournisseur)] = art; idx[k]._dernier = art; };
+      if(art.code) put(parCode, keyOf(art.code));
+      put(parDesig, keyOf(art.designation));
+    }));
+  return { parCode, parDesig };
+}
+let CAT = { parCode: {}, parDesig: {} };
+function entree(l){ return (String(l.code || "").trim() && CAT.parCode[keyOf(l.code)]) || CAT.parDesig[keyOf(l.designation)] || null; }
+function refs(l, fourn){ const e = entree(l); return e ? { meme: fourn.trim() ? e[keyOf(fourn)] || null : null, autre: e._dernier } : {}; }
+const pct = (n, ref) => (Math.round((n - ref) / ref * 1000) / 10).toString().replace(".", ",");
+function catalogueDatalists(){
+  CAT = catalogue(draft && draft.id);
+  const codes = Object.values(CAT.parCode).map(e => e._dernier), desig = Object.values(CAT.parDesig).map(e => e._dernier);
+  return `<datalist id="dl-code">${codes.map(a => `<option value="${esc(a.code)}">${esc(a.designation)}</option>`).join("")}</datalist>
+    <datalist id="dl-desig">${desig.map(a => `<option value="${esc(a.designation)}">${esc(a.code)}</option>`).join("")}</datalist>`;
+}
+function remplirLigne(i, art){
+  const l = draft.lignes[i], box = document.querySelector(`.line[data-i="${i}"]`); if(!box) return;
+  ["code", "designation", "unite", "pu", "remise"].forEach(k => {
+    if(k === "code" && !art.code) return;
+    l[k] = art[k]; const inp = box.querySelector(`[data-l="${k}"]`); if(inp && document.activeElement !== inp) inp.value = art[k];
+  });
+}
+// Message sous l'article : écart de prix chez le même fournisseur, ou suggestion d'un autre fournisseur.
+function hintLigne(i){
+  const l = draft.lignes[i], h = document.querySelector(`.line[data-i="${i}"] [data-hint]`); if(!h || !l) return;
+  const { meme, autre } = refs(l, draft.fournisseur.nom), pu = num(l.pu);
+  if(meme){
+    if(!pu || pu === meme.pu) h.innerHTML = `<span style="color:#067647">✓ Même prix qu'au ${dFr(meme.date)} (${esc(meme.numero)})</span>`;
+    else { const up = pu > meme.pu; h.innerHTML = `<span style="color:${up ? "var(--bad)" : "#067647"};font-weight:600">${up ? "▲ +" : "▼ "}${pct(pu, meme.pu)} %</span> · avant ${fmt(meme.pu)} le ${dFr(meme.date)}`; }
+  } else if(autre){
+    const applique = pu === autre.pu && keyOf(l.designation) === keyOf(autre.designation);
+    h.innerHTML = applique
+      ? `Prix repris de ${esc(autre.fournisseur || "?")} (${dFr(autre.date)}) : à vérifier chez ce fournisseur`
+      : `Déjà acheté chez ${esc(autre.fournisseur || "?")} le ${dFr(autre.date)} : ${fmt(autre.pu)} · <button class="btn sm" data-act="use-art" data-i="${i}">Utiliser</button>`;
+  } else h.innerHTML = String(l.designation || "").trim() && draft.fournisseur.nom.trim() ? "Nouvel article chez ce fournisseur" : "";
+}
+const hintsTous = () => draft && draft.lignes.forEach((_, i) => hintLigne(i));
+// Lignes dont le prix a changé depuis le dernier achat chez le même fournisseur (pour la revue).
+function ecartsPrix(b){
+  const cat = catalogue(b.id, (b.date || "") + (b.cree || "")), out = [];
+  b.lignes.forEach(l => {
+    const e = (String(l.code || "").trim() && cat.parCode[keyOf(l.code)]) || cat.parDesig[keyOf(l.designation)];
+    const m = e && e[keyOf(b.fournisseur.nom)];
+    if(m && num(l.pu) && num(l.pu) !== m.pu) out.push({ l, m });
+  });
+  return out;
+}
+
 function lineHTML(l, i){
   return `<div class="line" data-i="${i}"><div class="hd"><span>Article ${i + 1}</span>
     <span class="row"><button class="btn sm" data-act="upline" data-i="${i}" ${i ? "" : "disabled"}>↑</button><button class="btn sm bad" data-act="delline" data-i="${i}">Supprimer</button></span></div>
-    <div class="g"><div><label>Code</label><input data-l="code" value="${esc(l.code)}"></div>
-      <div><label>Désignation</label><input data-l="designation" value="${esc(l.designation)}"></div></div>
+    <div class="g"><div><label>Code</label><input data-l="code" list="dl-code" autocomplete="off" value="${esc(l.code)}"></div>
+      <div><label>Désignation</label><input data-l="designation" list="dl-desig" autocomplete="off" value="${esc(l.designation)}"></div></div>
     <div class="g2"><div><label>Qté</label><input data-l="qte" type="number" inputmode="decimal" step="any" value="${esc(l.qte)}"></div>
       <div><label>Unité</label><input data-l="unite" list="dl-unite" value="${esc(l.unite)}"></div>
       <div><label>PU HT (Ar)</label><input data-l="pu" type="number" inputmode="decimal" step="any" value="${esc(l.pu)}"></div>
       <div><label>Remise %</label><input data-l="remise" type="number" inputmode="decimal" step="any" value="${esc(l.remise)}"></div></div>
-    <div class="mt" data-mt="${i}">${fmt(montantLigne(l))}</div></div>`;
+    <div class="row" style="justify-content:space-between;margin-top:8px"><span class="hint" data-hint style="margin:0"></span><b data-mt="${i}">${fmt(montantLigne(l))}</b></div></div>`;
 }
 function renderTotals(){
   const t = totaux(draft), el = $("#totals"); if(!el) return;
@@ -571,6 +630,7 @@ function viewDetail(id){
       ${b.revue.commentaire ? `<div class="hint" style="margin-top:8px">Revue de ${esc(b.revue.par)} : « ${esc(b.revue.commentaire)} »</div>` : ""}
       ${!last ? `<div class="hint" style="margin-top:8px;color:var(--warn)">Une version plus récente existe.</div>` : ""}</div>
     <div class="row" style="margin-bottom:12px"><button class="btn pri" data-act="print">🖨 Imprimer / PDF</button>${A.join("")}</div>
+    ${(() => { const ec = ecartsPrix(b); return ec.length ? `<div class="card" style="border-color:#f5c99a;background:var(--warn-bg)"><h2 style="color:var(--warn)">Changements de prix chez ${esc(b.fournisseur.nom)}</h2>${ec.map(({ l, m }) => { const up = num(l.pu) > m.pu; return `<div class="row" style="justify-content:space-between;padding:3px 0;font-size:14px"><span>${esc(l.designation)}</span><span>${fmt(m.pu)} → <b>${fmt(num(l.pu))}</b> <b style="color:${up ? "var(--bad)" : "#067647"}">${up ? "+" : ""}${pct(num(l.pu), m.pu)} %</b></span></div>`; }).join("")}<div class="hint">Comparé au dernier bon chez ce fournisseur.</div></div>` : ""; })()}
     <div class="preview" id="pv"><div class="scaler">${docHTML(b)}</div></div>
     ${versions.length > 1 ? `<div class="card"><h2>Versions</h2>${versions.map(v => `<div class="row" style="justify-content:space-between;padding:4px 0"><a href="#/bon/${v.id}">v${v.version}</a>${badge(v.statut)}<span>${fmt(totaux(v).net)}</span></div>`).join("")}</div>` : ""}
     <div class="card"><h2>Historique</h2><ul class="hist">${b.historique.slice().reverse().map(h => `<li><b>${esc(h.action)}</b> · ${esc(h.par)} · ${dtFr(h.date)}${h.commentaire ? `<div class="c">${esc(h.commentaire)}</div>` : ""}</li>`).join("") || "<li>—</li>"}</ul></div>`;
@@ -651,13 +711,20 @@ document.addEventListener("input", e => {
     if(p.length === 2) draft[p[0]][p[1]] = el.value; else draft[p[0]] = el.value;
     if(el.dataset.f === "fournisseur.nom"){
       const known = fournisseurs[el.value.trim().toLowerCase()];
+      setTimeout(hintsTous, 0);
       if(known){ draft.fournisseur = Object.assign(clone(known), { nom: el.value }); ["contact", "adresse", "nif", "stat", "rcs"].forEach(k => { const i = document.querySelector(`[data-f="fournisseur.${k}"]`); if(i) i.value = draft.fournisseur[k] || ""; }); }
     }
     renderTotals();
   }
   if(el.dataset.l){
     const i = +el.closest(".line").dataset.i, l = draft.lignes[i];
-    l[el.dataset.l] = ["qte", "pu", "remise"].includes(el.dataset.l) ? el.value : el.value;
+    l[el.dataset.l] = el.value;
+    if(el.dataset.l === "code" || (el.dataset.l === "designation" && !String(l.code || "").trim())){
+      const idx = el.dataset.l === "code" ? CAT.parCode : CAT.parDesig, e = idx[keyOf(el.value)];
+      const meme = e && draft.fournisseur.nom.trim() && e[keyOf(draft.fournisseur.nom)];
+      if(meme) remplirLigne(i, meme);
+    }
+    hintLigne(i);
     const mt = document.querySelector(`[data-mt="${i}"]`); if(mt) mt.textContent = fmt(montantLigne(l));
     renderTotals();
   }
@@ -670,9 +737,9 @@ document.addEventListener("click", e => {
     case "sync": syncAll(true); break;
     case "filtre": filtre.statut = el.dataset.v; viewList(); break;
     case "open": go("#/bon/" + el.dataset.id); break;
-    case "addline": draft.lignes.push({ code: "", designation: "", unite: "pce", qte: 1, pu: 0, remise: 0 }); $("#lines").innerHTML = draft.lignes.map(lineHTML).join(""); renderTotals(); $("#lines").lastElementChild.querySelector('[data-l="designation"]').focus(); break;
-    case "delline": draft.lignes.splice(+el.dataset.i, 1); if(!draft.lignes.length) draft.lignes.push({ code: "", designation: "", unite: "pce", qte: 1, pu: 0, remise: 0 }); $("#lines").innerHTML = draft.lignes.map(lineHTML).join(""); renderTotals(); break;
-    case "upline": { const i = +el.dataset.i; [draft.lignes[i - 1], draft.lignes[i]] = [draft.lignes[i], draft.lignes[i - 1]]; $("#lines").innerHTML = draft.lignes.map(lineHTML).join(""); break; }
+    case "addline": draft.lignes.push({ code: "", designation: "", unite: "pce", qte: 1, pu: 0, remise: 0 }); $("#lines").innerHTML = draft.lignes.map(lineHTML).join(""); renderTotals(); hintsTous(); $("#lines").lastElementChild.querySelector('[data-l="designation"]').focus(); break;
+    case "delline": draft.lignes.splice(+el.dataset.i, 1); if(!draft.lignes.length) draft.lignes.push({ code: "", designation: "", unite: "pce", qte: 1, pu: 0, remise: 0 }); $("#lines").innerHTML = draft.lignes.map(lineHTML).join(""); renderTotals(); hintsTous(); break;
+    case "upline": { const i = +el.dataset.i; [draft.lignes[i - 1], draft.lignes[i]] = [draft.lignes[i], draft.lignes[i - 1]]; $("#lines").innerHTML = draft.lignes.map(lineHTML).join(""); hintsTous(); break; }
     case "save-draft": commitDraft(false); break;
     case "save-submit": commitDraft(true); break;
     case "cancel-edit": { const i = draft.id; draft = null; go("#/bon/" + i); break; }
@@ -701,6 +768,7 @@ document.addEventListener("click", e => {
       };
       break;
     }
+    case "use-art": { const i = +el.dataset.i, r = refs(draft.lignes[i], draft.fournisseur.nom); if(r.autre){ remplirLigne(i, r.autre); const mt = document.querySelector(`[data-mt="${i}"]`); if(mt) mt.textContent = fmt(montantLigne(draft.lignes[i])); renderTotals(); hintLigne(i); } break; }
     case "export": { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(bons, null, 2)], { type: "application/json" })); a.download = "bons-de-commande-" + today() + ".json"; a.click(); break; }
   }
 });
