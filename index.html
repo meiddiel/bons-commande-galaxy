@@ -347,7 +347,7 @@ async function syncAll(manual){
       await api({ action: "save", bon: payload(b) });
       b.dirty = false; b.historique.forEach(h => h.s = 1); persist();
     }
-    if(manual) await pull();
+    await pull();
     syncState = "idle"; refreshSyncLabel();
     if(manual) toast("Synchronisation terminée");
   }catch(e){
@@ -366,7 +366,7 @@ async function pull(){
     if(r.fournisseur && r.fournisseur.nom) fournisseurs[r.fournisseur.nom.trim().toLowerCase()] = r.fournisseur;
   });
   bons.sort((a, b) => (b.modifie || "").localeCompare(a.modifie || ""));
-  persist(); if(n) route();
+  persist(); if(n && !/^#\/(nouveau|modifier)/.test(location.hash)) route();
 }
 window.addEventListener("online", () => syncAll());
 window.addEventListener("offline", refreshSyncLabel);
@@ -627,7 +627,7 @@ function viewSettings(){
     ${f("Délai de livraison (jours)", "delaiLivraison", { type: "number" })}
     ${f("Adresse de livraison", "adresseLivraison")}
     ${f("Conditions de paiement", "conditions", { full: true })}</div></div>
-  <div class="card"><h2>Données</h2><div class="row"><button class="btn" data-act="export">Exporter (JSON)</button></div>
+  <div class="card"><h2>Données</h2><div class="row"><button class="btn" data-act="export">Exporter (JSON)</button><button class="btn bad" data-act="reset">Effacer les bons de cet appareil</button></div>
     <div class="hint">${bons.length} bon(s) sur cet appareil.</div></div>`;
   $("#logo").onchange = e => {
     const file = e.target.files[0]; if(!file) return;
@@ -684,6 +684,23 @@ document.addEventListener("click", e => {
     case "duplicate": { const n = clone(b); Object.assign(n, { id: uid(), numero: prochainNumero(), version: 1, statut: "Brouillon", date: today(), livraison: addDays(today(), num(S.delaiLivraison) || 0), avoir: 0, avoirRef: "", revue: { commentaire: "", par: "", date: "" }, historique: [], cree: nowIso() }); delete n.exemple; logEvt(n, "Création", "Copie de " + b.numero + " v" + b.version); upsert(n); draft = null; go("#/modifier/" + n.id); break; }
     case "test": (async () => { if(!S.apiUrl) return toast("Renseignez l'URL"); try{ await api({ action: "ping" }); syncState = "idle"; toast("Connexion au Sheet OK ✓"); refreshSyncLabel(); }catch(err){ toast("Échec : " + err.message); } })(); break;
     case "nologo": S.logo = ""; saveSettings(); viewSettings(); break;
+    case "reset": {
+      const pending = bons.filter(x => x.dirty && !x.exemple).length;
+      const m = document.createElement("div"); m.className = "modal";
+      m.innerHTML = `<div class="box"><h3>Effacer les bons de cet appareil ?</h3>
+        <p>Les ${bons.length} bon(s) enregistrés sur ce téléphone seront supprimés. Vos paramètres (entreprise, logo, liaison au Sheet) sont conservés.</p>
+        ${pending ? `<p style="color:var(--bad)"><b>${pending} bon(s) ne sont pas encore envoyés au Sheet</b> et seront perdus.</p>` : ""}
+        <p class="hint">Si le Sheet contient encore des bons, ils reviendront à la prochaine synchronisation : videz d'abord le Sheet.</p>
+        <label>Tapez EFFACER pour confirmer</label><input id="rs-ok" autocomplete="off">
+        <div class="row end" style="margin-top:12px"><button class="btn" data-x>Fermer</button><button class="btn bad" data-y>Effacer</button></div></div>`;
+      document.body.appendChild(m);
+      m.querySelector("[data-x]").onclick = () => m.remove();
+      m.querySelector("[data-y]").onclick = () => {
+        if(m.querySelector("#rs-ok").value.trim().toUpperCase() !== "EFFACER") return toast("Tapez EFFACER pour confirmer");
+        bons = []; draft = null; persist(); m.remove(); toast("Bons effacés de cet appareil"); go("#/");
+      };
+      break;
+    }
     case "export": { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(bons, null, 2)], { type: "application/json" })); a.download = "bons-de-commande-" + today() + ".json"; a.click(); break; }
   }
 });
