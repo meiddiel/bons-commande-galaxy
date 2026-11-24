@@ -1,6 +1,6 @@
 // Cache de l'application pour un fonctionnement hors ligne.
 // Changez VERSION à chaque mise à jour des fichiers.
-const VERSION = "bc-v3";
+const VERSION = "bc-v4";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", e => {
